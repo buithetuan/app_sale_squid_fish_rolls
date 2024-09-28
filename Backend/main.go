@@ -1,15 +1,18 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
+	"Backend/logs"
 	"Backend/routers"
+	"github.com/gin-gonic/gin"
 )
 
-func main(){
-    router := gin.Default()
+func main() {
+	logs.InitLogger()
 
-	routers.UserRouter(router)
+	router := gin.Default()
+
+	routers.InitRouter(router)
 
 	router.Run(":9000")
-	
+
 }

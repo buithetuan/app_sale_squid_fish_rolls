@@ -44,4 +44,6 @@ func main() {
 
 	log.Println("DB User:", config.DBUser)
 	log.Println("JWT Secret Key:", config.JWTSecretKey)
+	log.Println("Redis Host:", config.RedisHost)
+	log.Println("Redis Port:", config.RedisPort)
 }
