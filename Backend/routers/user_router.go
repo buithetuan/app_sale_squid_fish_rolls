@@ -1,17 +1,15 @@
 package routers
 
 import (
-    "github.com/gin-gonic/gin"
-    "Backend/controllers"
+	"Backend/handlers"
+	"github.com/gin-gonic/gin"
 )
 
-func UserRouter(router *gin.Engine) {
-    userRoutes := router.Group("/users")
-    {
-        userRoutes.POST("/signup", controllers.SignUp)
-        userRoutes.POST("/login", controllers.Login)
-        userRoutes.PUT("/:user_id", controllers.UpdateUser)
-        userRoutes.GET("/:user_id", controllers.GetUser)
-        userRoutes.DELETE("/:user_id", controllers.DeleteUser)
-    }
+func UserRouter(router *gin.RouterGroup, userHandler *handlers.UserHandler) {
+	{
+		router.POST("/users/signup", userHandler.SignUpHandler)
+		router.POST("/login", userHandler.LogInHandler)
+		router.PUT("users/update-user", userHandler.UpdateUserHandler)
+		router.GET("/get-user-detail/:user_id", userHandler.GetUserDetailHandler)
+	}
 }
