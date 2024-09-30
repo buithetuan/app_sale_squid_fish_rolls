@@ -3,7 +3,9 @@ package middeleware
 import (
 	"context"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"log"
+	"strings"
 	"time"
 
 	"Backend/config"
@@ -23,8 +25,8 @@ func init() {
 	redisClient = config.ConnectRedis(cfg)
 }
 
-func saveTokenToRedis(token string, userID string, expiration time.Duration) error {
-	err := redisClient.Set(ctx, token, userID, expiration).Err()
+func saveTokenToRedis(tokenKey string, token string, expiration time.Duration) error {
+	err := redisClient.Set(ctx, tokenKey, token, expiration).Err() // Lưu token với khóa là tokenKey
 	if err != nil {
 		return fmt.Errorf("Error saving token to Redis: %v", err)
 	}
@@ -32,6 +34,15 @@ func saveTokenToRedis(token string, userID string, expiration time.Duration) err
 }
 
 func CreateToken(data map[string]interface{}) (string, string, error) {
+	userID := fmt.Sprintf("%v", data["user_id"])
+
+	if err := redisClient.Del(ctx, userID+":access").Err(); err != nil {
+		return "", "", fmt.Errorf("error deleting old access token from Redis: %v", err)
+	}
+	if err := redisClient.Del(ctx, userID+":refresh").Err(); err != nil {
+		return "", "", fmt.Errorf("error deleting old refresh token from Redis: %v", err)
+	}
+
 	accessToken, err := createAccessToken(data)
 	if err != nil {
 		return "", "", err
@@ -39,6 +50,13 @@ func CreateToken(data map[string]interface{}) (string, string, error) {
 	refreshToken, err := createRefreshToken(data)
 	if err != nil {
 		return "", "", err
+	}
+
+	if err := saveTokenToRedis(userID+":access", accessToken, 1*time.Hour); err != nil {
+		log.Println("Error saving access token to Redis:", err)
+	}
+	if err := saveTokenToRedis(userID+":refresh", refreshToken, 7*24*time.Hour); err != nil {
+		log.Println("Error saving refresh token to Redis:", err)
 	}
 
 	return accessToken, refreshToken, nil
@@ -60,14 +78,6 @@ func createAccessToken(data map[string]interface{}) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = saveTokenToRedis(
-		tokenStr,
-		fmt.Sprintf("%v", data["user_id"]),
-		1*time.Hour,
-	)
-	if err != nil {
-		log.Println("Error saving access token to Redis:", err)
-	}
 
 	return tokenStr, nil
 }
@@ -88,14 +98,6 @@ func createRefreshToken(data map[string]interface{}) (string, error) {
 		return "", err
 	}
 
-	err = saveTokenToRedis(
-		tokenStr,
-		fmt.Sprintf("%v", data["user_id"]),
-		7*24*time.Hour,
-	)
-	if err != nil {
-		log.Println("Error saving refresh token to Redis:", err)
-	}
 	return tokenStr, nil
 }
 
@@ -117,5 +119,34 @@ func DecodeToken(tokenString string) (map[string]interface{}, error) {
 		return nil, fmt.Errorf("token is invalid")
 	}
 
+	userID := claims["user_id"]
+	existingToken, err := redisClient.Get(ctx, fmt.Sprintf("%v:access", userID)).Result()
+	if err != nil || existingToken == "" {
+		return nil, fmt.Errorf("token does not exist in Redis")
+	}
+
 	return claims, nil
+}
+
+func GetUserIDFromToken(c *gin.Context) (int, error) {
+	token := c.GetHeader("Authorization")
+	if token == "" {
+		return 0, fmt.Errorf("No Authorization Token")
+	}
+
+	if strings.HasPrefix(token, "Bearer ") {
+		token = strings.TrimPrefix(token, "Bearer ")
+	}
+
+	claims, err := DecodeToken(token)
+	if err != nil {
+		return 0, err
+	}
+
+	userIDFloat, ok := claims["user_id"].(float64)
+	if !ok {
+		return 0, fmt.Errorf("No User Token")
+	}
+
+	return int(userIDFloat), nil
 }
