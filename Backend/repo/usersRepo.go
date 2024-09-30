@@ -62,3 +62,15 @@ func (r *UserRepo) UpdateUser(userID int, userUpdates *models.Users) (*models.Us
 
 	return updatedUser, nil
 }
+
+func (r *UserRepo) IsAdmin(userID int) (bool, error) {
+	var user models.Users
+	if err := r.db.Where("user_id = ?", userID).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get user by id: %v", err)
+	}
+
+	return user.IsAdmin, nil
+}

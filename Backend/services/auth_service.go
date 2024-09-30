@@ -1,7 +1,7 @@
 package services
 
 import (
-	"Backend/middelware"
+	"Backend/middeleware"
 	"Backend/models"
 	"Backend/repo"
 	"errors"
@@ -9,15 +9,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserService struct {
+type AuthService struct {
 	userRepo *repo.UserRepo
+	cartRepo *repo.CartRepo
 }
 
-func NewUserService(userRepo *repo.UserRepo) *UserService {
-	return &UserService{userRepo: userRepo}
+func NewAuthService(userRepo *repo.UserRepo, cartRepo *repo.CartRepo) *AuthService {
+	return &AuthService{
+		userRepo: userRepo,
+		cartRepo: cartRepo,
+	}
 }
 
-func (s *UserService) SignUpService(username string, password string) error {
+func (s *AuthService) SignUpService(username string, password string, email string, phone_number string, address string) error {
 	existingUser, err := s.userRepo.GetUserByUserName(username)
 	if err != nil {
 		return err
@@ -26,21 +30,24 @@ func (s *UserService) SignUpService(username string, password string) error {
 		return fmt.Errorf("username %s already exists", username)
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 
-	user := models.Users{Username: username, Password: string(hash)}
-
+	user := models.Users{Username: username, Password: string(hash), Email: email, PhoneNumber: phone_number, Address: address}
 	if err := s.userRepo.CreateUser(&user); err != nil {
 		return err
 	}
 
+	cart := models.Carts{UserID: int(user.UserID)}
+	if err := s.cartRepo.CreateCart(&cart); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (s *UserService) LoginService(loginType string, username string, password string) (string, string, error) {
+func (s *AuthService) LoginService(loginType string, username string, password string) (string, string, error) {
 	switch loginType {
 	//case "google":
 	//	return s.LoginWithGoogle(token)
@@ -52,10 +59,7 @@ func (s *UserService) LoginService(loginType string, username string, password s
 	}
 }
 
-//func (s *UserService) LoginWithGoogle(token) error {
-//}
-
-func (s *UserService) LoginWithUsername(username string, password string) (string, string, error) {
+func (s *AuthService) LoginWithUsername(username string, password string) (string, string, error) {
 	existingUser, err := s.userRepo.GetUserByUserName(username)
 	if err != nil {
 		return "", "", err
@@ -81,27 +85,16 @@ func (s *UserService) LoginWithUsername(username string, password string) (strin
 	return accessToken, refreshToken, nil
 }
 
-func (s *UserService) UpdateUserService(userID int, email string, phoneNumber string, address string) (*models.Users, error) {
-	existingUse, err := s.userRepo.GetUserByID(userID)
+func (s *AuthService) RefreshTokenService(refreshToken string) (string, string, error) {
+	claims, err := middeleware.DecodeToken(refreshToken)
 	if err != nil {
-		return nil, err
-	}
-	if existingUse == nil {
-		return nil, fmt.Errorf("user %d does not exists", userID)
+		return "", "", err
 	}
 
-	existingUse.Email = email
-	existingUse.PhoneNumber = phoneNumber
-	existingUse.Address = address
-
-	updatedUser, err := s.userRepo.UpdateUser(userID, existingUse)
+	accessToken, refreshToken, err := middeleware.CreateToken(claims)
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
 
-	return updatedUser, nil
-}
-
-func (s *UserService) GetUserService(userID int) (*models.Users, error) {
-	return s.userRepo.GetUserByID(userID)
+	return accessToken, refreshToken, nil
 }

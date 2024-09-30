@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-type Product struct {
+type Products struct {
 	ProductID string    `json:"product_id" gorm:"primaryKey"`
 	Name      string    `json:"name" gorm:"not null"`
 	Note      string    `json:"note"`
