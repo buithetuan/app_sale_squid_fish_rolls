@@ -4,7 +4,7 @@ import "time"
 
 type CartItems struct {
 	CartItemID  uint      `json:"cart_item_id" gorm:"primaryKey"`
-	CartID      int       `json:"cart_id" gorm:"not null"`
+	CartID      uint      `json:"cart_id" gorm:"not null"`
 	ProductID   string    `json:"product_id" gorm:"not null"`
 	ProductName string    `json:"product_name" gorm:"not null"`
 	Price       float64   `json:"price" gorm:"not null"`
@@ -12,6 +12,6 @@ type CartItems struct {
 	CreatedAt   time.Time `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt   time.Time `json:"updated_at" gorm:"autoUpdateTime"`
 
-	Products Products `json:"product" gorm:"foreignKey:ProductID"`
-	Cart     Carts    `json:"cart" gorm:"foreignKey:CartID"`
+	Product Products `json:"product" gorm:"foreignKey:ProductID;references:ProductID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Cart    Carts    `json:"cart" gorm:"foreignKey:CartID;references:CartID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }

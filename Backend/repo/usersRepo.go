@@ -33,7 +33,7 @@ func (r *UserRepo) GetUserByUserName(username string) (*models.Users, error) {
 	}
 	return &user, nil
 }
-func (r *UserRepo) GetUserByID(userID int) (*models.Users, error) {
+func (r *UserRepo) GetUserByID(userID uint) (*models.Users, error) {
 	var user models.Users
 	if err := r.db.Where("user_id = ?", userID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -44,7 +44,7 @@ func (r *UserRepo) GetUserByID(userID int) (*models.Users, error) {
 	return &user, nil
 }
 
-func (r *UserRepo) UpdateUser(userID int, userUpdates *models.Users) (*models.Users, error) {
+func (r *UserRepo) UpdateUser(userID uint, userUpdates *models.Users) (*models.Users, error) {
 	var user models.Users
 
 	if err := r.db.Model(user).Where("user_id = ?", userID).Select("email", "phone_number", "address").Updates(userUpdates).Error; err != nil {
@@ -63,7 +63,7 @@ func (r *UserRepo) UpdateUser(userID int, userUpdates *models.Users) (*models.Us
 	return updatedUser, nil
 }
 
-func (r *UserRepo) IsAdmin(userID int) (bool, error) {
+func (r *UserRepo) IsAdmin(userID uint) (bool, error) {
 	var user models.Users
 	if err := r.db.Where("user_id = ?", userID).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -73,4 +73,45 @@ func (r *UserRepo) IsAdmin(userID int) (bool, error) {
 	}
 
 	return user.IsAdmin, nil
+}
+func (r *UserRepo) AddToTotalBuy(userID uint, finalPrice float64) error {
+	if err := r.db.Model(&models.Users{}).Where("user_id = ?", userID).Update("total_buy", gorm.Expr("total_buy + ?", finalPrice)).Error; err != nil {
+		return fmt.Errorf("failed to update total buy for user %d: %v", userID, err)
+	}
+	return nil
+}
+
+func (r *UserRepo) UpdateUserRank(userID uint) error {
+	user, err := r.GetUserByID(userID)
+	if err != nil {
+		return err
+	}
+
+	var rank string
+
+	switch {
+	case user.TotalBuy >= 3000000.0:
+		rank = "silver"
+	case user.TotalBuy >= 5000000.0:
+		rank = "gold"
+	case user.TotalBuy >= 10000000.0:
+		rank = "premium"
+	case user.TotalBuy >= 15000000.0:
+		rank = "patron"
+	default:
+		rank = "bronze"
+	}
+
+	if err := r.db.Model(&models.Users{}).Where("user_id = ?", userID).Update("rank", rank).Error; err != nil {
+		return fmt.Errorf("failed to update user rank for user %d: %v", userID, err)
+	}
+
+	return nil
+}
+func (r *UserRepo) GetRankFromUserID(userID uint) (models.UserRank, error) {
+	var user models.Users
+	if err := r.db.Where("user_id = ?", userID).First(&user).Error; err != nil {
+		return "", err
+	}
+	return user.Rank, nil
 }

@@ -20,7 +20,7 @@ func NewAdminService(userRepo *repo.UserRepo, productRepo *repo.ProductRepo, ord
 	}
 }
 
-func (as *AdminService) CheckAdmin(userID int) error {
+func (as *AdminService) CheckAdmin(userID uint) error {
 	isAdmin, err := as.userRepo.IsAdmin(userID)
 	if err != nil {
 		return err
@@ -146,7 +146,7 @@ func validateShipStatus(status string) error {
 	return fmt.Errorf("invalid shipping status: %s", status)
 }
 
-func (as *AdminService) UpdateStatusOrderService(orderID int, orderStatus string, paymentStatus string, shipStatus string) error {
+func (as *AdminService) UpdateStatusOrderService(orderID uint, orderStatus string, paymentStatus string, shipStatus string) error {
 	order, err := as.orderRepo.GetOrderByID(orderID)
 	if err != nil {
 		return fmt.Errorf("failed to get order: %v", err)
@@ -178,6 +178,15 @@ func (as *AdminService) UpdateStatusOrderService(orderID int, orderStatus string
 
 	if err := as.orderRepo.UpdateStatusOrder(order); err != nil {
 		return fmt.Errorf("failed to update order: %v", err)
+	}
+
+	if paymentStatus == string(models.PaymentPaid) {
+		if err := as.userRepo.AddToTotalBuy(order.UserID, order.FinalPrice); err != nil {
+			return fmt.Errorf("failed to add to total buy: %v", err)
+		}
+		if err := as.userRepo.UpdateUserRank(order.UserID); err != nil {
+			return fmt.Errorf("failed to update user rank: %v", err)
+		}
 	}
 	return nil
 }

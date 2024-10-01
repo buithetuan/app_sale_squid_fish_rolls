@@ -22,14 +22,14 @@ func (r *CartRepo) CreateCart(cart *models.Carts) error {
 	return nil
 }
 
-func (r *CartRepo) GetCartByUserID(ctx context.Context, userID int) (*models.Carts, error) {
+func (r *CartRepo) GetCartByUserID(ctx context.Context, userID uint) (*models.Carts, error) {
 	var cart models.Carts
 
-	err := r.db.WithContext(ctx).Preload("CartItems.Products").Where("user_id = ?", userID).Find(&cart).Error
+	err := r.db.WithContext(ctx).Preload("CartItems.Products").Where("user_id = ?", userID).First(&cart).Error
 
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return nil, nil
+			return nil, fmt.Errorf("no cart found for user ID %d", userID)
 		}
 		return nil, err
 	}

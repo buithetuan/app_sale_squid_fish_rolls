@@ -69,22 +69,59 @@ func (h *UserHandler) GetUserDetailHandler(c *gin.Context) {
 	}, http.StatusOK, "User details retrieved successfully")
 }
 
-func (h *UserHandler) UserChosePaymentMethodHandler(c *gin.Context) {
+func (h *UserHandler) UserAddItemsHandler(c *gin.Context) {
 	userID, err := middeleware.GetUserIDFromToken(c)
 	if err != nil {
 		dto.SendResponse(c, nil, http.StatusUnauthorized, err.Error())
 		return
 	}
-	var chosePaymentMethod dto.ChosePaymentMethodRes
-	if err := c.ShouldBindJSON(&chosePaymentMethod); err != nil {
+
+	var addItemsRes dto.AddItemRes
+	if err := c.ShouldBind(&addItemsRes); err != nil {
 		dto.SendResponse(c, nil, http.StatusBadRequest, "Invalid input")
 		return
 	}
 
-	err = h.userService.UserChoseMethodPayService(userID, chosePaymentMethod.OrderId, chosePaymentMethod.Method)
+	if err := h.userService.UserAddItemsToCart(c.Request.Context(), userID, addItemsRes.ProductId, addItemsRes.Quantity); err != nil {
+		dto.SendResponse(c, nil, http.StatusInternalServerError, err.Error())
+		return
+	}
+	dto.SendResponse(c, nil, http.StatusOK, "Added items successfully")
+}
+
+func (h *UserHandler) UserRemoveItemsHandler(c *gin.Context) {
+	userID, err := middeleware.GetUserIDFromToken(c)
+	if err != nil {
+		dto.SendResponse(c, nil, http.StatusUnauthorized, err.Error())
+	}
+
+	var removeItemsRes dto.RemoveItemRes
+	if err := c.ShouldBind(&removeItemsRes); err != nil {
+		dto.SendResponse(c, nil, http.StatusBadRequest, "Invalid input")
+	}
+
+	if err := h.userService.UserRemoveItemFromCart(c.Request.Context(), userID, removeItemsRes.ProductId); err != nil {
+		dto.SendResponse(c, nil, http.StatusInternalServerError, err.Error())
+		return
+	}
+	dto.SendResponse(c, nil, http.StatusOK, "Removed items successfully")
+}
+
+func (h *UserHandler) UserOrderHandler(c *gin.Context) {
+	userID, err := middeleware.GetUserIDFromToken(c)
+	if err != nil {
+		dto.SendResponse(c, nil, http.StatusUnauthorized, err.Error())
+	}
+
+	var orderRes dto.CreateOrderRes
+	if err := c.ShouldBind(&orderRes); err != nil {
+		dto.SendResponse(c, nil, http.StatusBadRequest, "Invalid input")
+		return
+	}
+	orderResponse, err := h.userService.UserOrderService(c, userID, orderRes.PaymentMethod, orderRes.DeliveryAddress)
 	if err != nil {
 		dto.SendResponse(c, nil, http.StatusInternalServerError, err.Error())
 		return
 	}
-	dto.SendResponse(c, nil, http.StatusOK, "Chose payment method successfully")
+	dto.SendResponse(c, orderResponse, http.StatusOK, "Order successfully")
 }

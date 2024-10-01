@@ -128,7 +128,7 @@ func DecodeToken(tokenString string) (map[string]interface{}, error) {
 	return claims, nil
 }
 
-func GetUserIDFromToken(c *gin.Context) (int, error) {
+func GetUserIDFromToken(c *gin.Context) (uint, error) {
 	token := c.GetHeader("Authorization")
 	if token == "" {
 		return 0, fmt.Errorf("No Authorization Token")
@@ -148,5 +148,5 @@ func GetUserIDFromToken(c *gin.Context) (int, error) {
 		return 0, fmt.Errorf("No User Token")
 	}
 
-	return int(userIDFloat), nil
+	return uint(userIDFloat), nil
 }

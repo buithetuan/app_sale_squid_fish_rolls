@@ -7,20 +7,18 @@ import (
 )
 
 type OrderRepo struct {
-	db *gorm.DB
+	db       *gorm.DB
+	userRepo *UserRepo
 }
 
-func NewOrderRepo(db *gorm.DB) *OrderRepo {
-	return &OrderRepo{db: db}
+func NewOrderRepo(db *gorm.DB, userRepo *UserRepo) *OrderRepo {
+	return &OrderRepo{db: db, userRepo: userRepo}
 }
 
-func (r *OrderRepo) GetOrderByID(orderID int) (*models.Orders, error) {
+func (r *OrderRepo) GetOrderByID(orderID uint) (*models.Orders, error) {
 	var order models.Orders
-	if err := r.db.Where("order_id = ?", orderID).First(&order).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, fmt.Errorf("order not found")
-		}
-		return nil, fmt.Errorf("error fetching order: %v", err)
+	if err := r.db.Preload("Items").First(&order, orderID).Error; err != nil {
+		return nil, err
 	}
 	return &order, nil
 }
@@ -32,11 +30,17 @@ func (r *OrderRepo) UpdateStatusOrder(order *models.Orders) error {
 	return nil
 }
 
-func (r *OrderRepo) ChosePaymentMethod(order *models.Orders) error {
-	if err := r.db.Save(order).Error; err != nil {
-		return fmt.Errorf("error chosing payment method order: %v", err)
+func (r *OrderRepo) GetDefaultAddress(userID uint) (string, error) {
+	user, err := r.userRepo.GetUserByID(userID)
+	if err != nil {
+		return "", err
 	}
-	return nil
+	return user.Address, nil
 }
 
-func (r *OrderRepo) CreateOrder(cartID int)
+func (r *OrderRepo) CreateOrder(order *models.Orders) (uint, error) {
+	if err := r.db.Create(order).Error; err != nil {
+		return 0, err
+	}
+	return order.OrderID, nil
+}

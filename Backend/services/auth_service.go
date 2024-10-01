@@ -40,7 +40,7 @@ func (s *AuthService) SignUpService(username string, password string, email stri
 		return err
 	}
 
-	cart := models.Carts{UserID: int(user.UserID)}
+	cart := models.Carts{UserID: user.UserID}
 	if err := s.cartRepo.CreateCart(&cart); err != nil {
 		return err
 	}

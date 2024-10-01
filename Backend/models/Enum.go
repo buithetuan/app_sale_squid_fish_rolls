@@ -42,3 +42,20 @@ const (
 	Premium UserRank = "Premium"
 	Patron  UserRank = "Patron"
 )
+
+func GetDiscountRate(rank UserRank) float64 {
+	switch rank {
+	case Silver:
+		return 0.05
+	case Gold:
+		return 0.08
+	case Premium:
+		return 0.1
+	case Patron:
+		return 0.15
+	case Bronze:
+		return 0.0
+	default:
+		return 0.0
+	}
+}

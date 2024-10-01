@@ -26,18 +26,23 @@ type UpdateUserRes struct {
 	Address     string `json:"address"`
 }
 
-type ChosePaymentMethodRes struct {
-	OrderId int    `json:"orderId"`
-	Method  string `json:"method"`
-}
-
 type CreateOrderRes struct {
-	CartID int `json:"cartId"`
+	DeliveryAddress string `json:"deliveryAddress"`
+	PaymentMethod   string `json:"paymentMethod"`
 }
 
 type UpdateOrderRes struct {
 	PaymentMethod   string `json:"paymentMethod"`
 	DeliveryAddress string `json:"deliveryAddress"`
+}
+
+type AddItemRes struct {
+	ProductId string `json:"productId"`
+	Quantity  int    `json:"quantity"`
+}
+
+type RemoveItemRes struct {
+	ProductId string `json:"productId"`
 }
 
 // Admin request
@@ -65,7 +70,7 @@ type GetSaleDataRes struct {
 }
 
 type UpdateOrderStatusRes struct {
-	OrderId       int    `json:"orderId"`
+	OrderId       uint   `json:"orderId"`
 	OrderStatus   string `json:"orderStatus"`
 	PaymentStatus string `json:"paymentState"`
 	ShipStatus    string `json:"shipStatus"`

@@ -17,11 +17,12 @@ func InitRouter(router *gin.Engine) {
 
 	userRepo := repo.NewUserRepo(gormDB)
 	productRepo := repo.NewProductRepo(gormDB)
-	orderRepo := repo.NewOrderRepo(gormDB)
+	orderRepo := repo.NewOrderRepo(gormDB, userRepo)
+	orderItemsRepo := repo.NewOrderItems(gormDB)
 	cartRepo := repo.NewCartRepo(gormDB)
 	cartItemsRepo := repo.NewCartItemRepo(gormDB)
 
-	userService := services.NewUserService(userRepo, cartRepo, orderRepo, cartItemsRepo)
+	userService := services.NewUserService(userRepo, cartRepo, orderRepo, cartItemsRepo, orderItemsRepo)
 	authService := services.NewAuthService(userRepo, cartRepo)
 	adminService := services.NewAdminService(userRepo, productRepo, orderRepo)
 
